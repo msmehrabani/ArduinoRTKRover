@@ -12,7 +12,11 @@
 #include <WiFiNINA.h>
 #include "arduino_secrets.h"
 
+
 #include <Wire.h> //Needed for I2C to GNSS
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
 
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h> //http://librarymanager/All#SparkFun_u-blox_GNSS
 SFE_UBLOX_GNSS myGNSS;
@@ -25,14 +29,28 @@ char pass[] = SECRET_PASS;
 char serverAddress[] = "192.168.178.20";  // server address
 int port = 8765;
 
-WiFiClient wifi;
-WebSocketClient client = WebSocketClient(wifi, serverAddress, port);
-int status = WL_IDLE_STATUS;
+//WiFiClient wifi;
+//WebSocketClient client = WebSocketClient(wifi, serverAddress, port);
+//int status = WL_IDLE_STATUS;
 int count = 0;
+
+RF24 radio(7, 6); // CE, CSN
+uint8_t addresses[][6] = { "Base", "Rover" };
 
 void setup() {
   Serial.begin(115200);
-  delay(3500);
+  while (!Serial); //Wait for user to open terminal
+
+  radio.begin();
+  radio.openWritingPipe(addresses[0]); // Base
+  radio.openReadingPipe(1, addresses[1]); // Rover
+  radio.setPALevel(RF24_PA_MIN);
+
+  if(radio.isChipConnected()){
+    Serial.println(F("RF24 Initialized!"));
+  }else{
+    Serial.println(F("Error: RF24 not connected!"));
+  }
 
   Wire.begin();
   Wire.setClock(400000); //Increase I2C clock speed to 400kHz
@@ -47,14 +65,14 @@ void setup() {
   myGNSS.saveConfigSelective(VAL_CFG_SUBSEC_IOPORT); //Save the communications port settings to flash and BBR
   myGNSS.setI2CTransactionSize(128);
 
-  
+  /*
   while ( status != WL_CONNECTED) {
     Serial.print("Attempting to connect to Network named: ");
     Serial.println(ssid);                   // print the network name (SSID);
 
     // Connect to WPA/WPA2 network:
     status = WiFi.begin(ssid, pass);
-  }
+  }*/
 
   // print the SSID of the network you're attached to:
   Serial.print("SSID: ");
@@ -67,9 +85,22 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("starting WebSocket client");
-  client.begin();
+  //Serial.println("starting WebSocket client");
+  //client.begin();
 
+  delay(5);
+  radio.stopListening();
+  const char text[] = "Hello World from RTK Rover";
+  radio.write(&text, sizeof(text));
+  delay(5);
+  radio.startListening();
+  if (radio.available()) {
+    char text_incoming[32] = "";
+    radio.read(&text_incoming, sizeof(text_incoming));
+    Serial.println(text_incoming);
+  }
+
+  /*
   while (client.connected()) {
     //Serial.print("Sending hello ");
     //Serial.println(count);
@@ -115,9 +146,9 @@ void loop() {
 
     // wait 5 seconds
     //delay(5000);
-  }
+  }*/
 
-  Serial.println("disconnected");
+  //Serial.println("disconnected");
 }
 
 //convert hexstring to len bytes of data
