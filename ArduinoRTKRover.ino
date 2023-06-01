@@ -8,10 +8,6 @@
   by Tom Igoe
   this example is in the public domain
 */
-#include <ArduinoHttpClient.h>
-#include <WiFiNINA.h>
-#include "arduino_secrets.h"
-
 
 #include <Wire.h> //Needed for I2C to GNSS
 #include <SPI.h>
@@ -21,25 +17,16 @@
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h> //http://librarymanager/All#SparkFun_u-blox_GNSS
 SFE_UBLOX_GNSS myGNSS;
 
-///////please enter your sensitive data in the Secret tab/arduino_secrets.h
-/////// WiFi Settings ///////
-char ssid[] = SECRET_SSID;
-char pass[] = SECRET_PASS;
-
-char serverAddress[] = "192.168.178.20";  // server address
-int port = 8765;
-
-//WiFiClient wifi;
-//WebSocketClient client = WebSocketClient(wifi, serverAddress, port);
-//int status = WL_IDLE_STATUS;
 int count = 0;
 
-RF24 radio(7, 6); // CE, CSN
+
+RF24 radio(8, 7); // CE, CSN
 uint8_t addresses[][6] = { "Base", "Rover" };
 
 void setup() {
   Serial.begin(115200);
   while (!Serial); //Wait for user to open terminal
+  Serial.println(F("u-blox NEO-M8P-2 Rover"));
 
   radio.begin();
   radio.openWritingPipe(addresses[0]); // Base
@@ -65,28 +52,10 @@ void setup() {
   myGNSS.saveConfigSelective(VAL_CFG_SUBSEC_IOPORT); //Save the communications port settings to flash and BBR
   myGNSS.setI2CTransactionSize(128);
 
-  /*
-  while ( status != WL_CONNECTED) {
-    Serial.print("Attempting to connect to Network named: ");
-    Serial.println(ssid);                   // print the network name (SSID);
 
-    // Connect to WPA/WPA2 network:
-    status = WiFi.begin(ssid, pass);
-  }*/
-
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print your WiFi shield's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
 }
 
 void loop() {
-  //Serial.println("starting WebSocket client");
-  //client.begin();
 
   delay(5);
   radio.stopListening();
@@ -100,55 +69,6 @@ void loop() {
     Serial.println(text_incoming);
   }
 
-  /*
-  while (client.connected()) {
-    //Serial.print("Sending hello ");
-    //Serial.println(count);
-
-    // send a hello #
-    ///client.beginMessage(TYPE_TEXT);
-    //client.print("hello ");
-    //client.print(count);
-    //client.endMessage();
-
-    // increment count for next message
-    //count++;
-
-    // check if a message is available to be received
-    int messageSize = client.parseMessage();
-
-    if (messageSize > 0) {
-      //Serial.println("Received a message:");
-
-      uint8_t store[256];
-      arduino::String line = client.readString();
-
-      //Serial.println(line); 
-      
-      unsigned int numBytes = line.length() / 2;
-
-
-      //Serial.println(numBytes);
-      
-      if(hex2data(((uint8_t *)&store), line,numBytes)==0){
-        myGNSS.pushRawData(((uint8_t *)&store), numBytes);
-
-        for(count = 0; count < numBytes; count++) {
-           Serial.print(store[count]);
-           Serial.print(" ");
-        }
-        Serial.println();
-      }
-      
-      
-      
-    }
-
-    // wait 5 seconds
-    //delay(5000);
-  }*/
-
-  //Serial.println("disconnected");
 }
 
 //convert hexstring to len bytes of data
