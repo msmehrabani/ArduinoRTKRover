@@ -23,6 +23,14 @@ int count = 0;
 RF24 radio(8, 7); // CE, CSN
 uint8_t addresses[][6] = { "Base", "Rover" };
 
+struct Data_Package {
+  byte    data_type = 0;
+  byte    data_size = 0;
+  uint8_t data[30];
+};
+
+Data_Package radio_data;
+
 void setup() {
   Serial.begin(115200);
   while (!Serial); //Wait for user to open terminal
@@ -52,23 +60,69 @@ void setup() {
   myGNSS.saveConfigSelective(VAL_CFG_SUBSEC_IOPORT); //Save the communications port settings to flash and BBR
   myGNSS.setI2CTransactionSize(128);
 
-
 }
+
+int cycle=0;
 
 void loop() {
 
+  cycle++;
+  
   delay(5);
-  radio.stopListening();
-  const char text[] = "Hello World from RTK Rover";
-  radio.write(&text, sizeof(text));
+  //radio.stopListening();
+  //const char text[] = "Hello World from RTK Rover";
+  //radio.write(&text, sizeof(text));
   delay(5);
   radio.startListening();
   if (radio.available()) {
-    char text_incoming[32] = "";
-    radio.read(&text_incoming, sizeof(text_incoming));
-    Serial.println(text_incoming);
+    radio.read(&radio_data, sizeof(Data_Package));
+
+    
+    if(radio_data.data_type==1){
+      Serial.print("RTCM Frame received: ");
+      for(int i=0;i<radio_data.data_size;i++){
+        if (radio_data.data[i] < 0x10) Serial.print(F("0"));  //WTF work around for eroneus HEX printing
+        Serial.print(radio_data.data[i], HEX);
+      }
+      Serial.println("");
+      myGNSS.pushRawData(((uint8_t *)&radio_data.data[0]), radio_data.data_size);
+    }
   }
 
+  if(cycle%2500 == 0){
+
+    long latitude = myGNSS.getLatitude();
+    Serial.print(F("Lat: "));
+    Serial.print(latitude);
+
+    long longitude = myGNSS.getLongitude();
+    Serial.print(F(" Long: "));
+    Serial.print(longitude);
+
+    long altitude = myGNSS.getAltitude();
+    Serial.print(F(" Alt: "));
+    Serial.print(altitude);
+
+    byte fixType = myGNSS.getFixType();
+    Serial.print(F(" Fix: "));
+    if(fixType == 0) Serial.print(F("No fix"));
+    else if(fixType == 1) Serial.print(F("Dead reckoning"));
+    else if(fixType == 2) Serial.print(F("2D"));
+    else if(fixType == 3) Serial.print(F("3D"));
+    else if(fixType == 4) Serial.print(F("GNSS + Dead reckoning"));
+    else if(fixType == 5) Serial.print(F("Time only"));
+
+    byte RTK = myGNSS.getCarrierSolutionType();
+    Serial.print(" RTK: ");
+    Serial.print(RTK);
+    if (RTK == 0) Serial.print(F(" (No solution)"));
+    else if (RTK == 1) Serial.print(F(" (High precision floating fix)"));
+    else if (RTK == 2) Serial.print(F(" (High precision fix)"));
+    Serial.println("");
+  }
+  if(cycle >100000){
+    cycle=0;
+  }
 }
 
 //convert hexstring to len bytes of data
