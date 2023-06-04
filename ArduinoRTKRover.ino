@@ -23,10 +23,14 @@ int count = 0;
 RF24 radio(8, 7); // CE, CSN
 uint8_t addresses[][6] = { "Base", "Rover" };
 
+static uint8_t rtk_frame_data[1024] = "";
+static uint8_t rtk_frame_size = 0 ;
+
 struct Data_Package {
   byte    data_type = 0;
   byte    data_size = 0;
-  uint8_t data[30];
+  byte    data_appendnext = 0;
+  uint8_t data[28];
 };
 
 Data_Package radio_data;
@@ -77,15 +81,22 @@ void loop() {
   if (radio.available()) {
     radio.read(&radio_data, sizeof(Data_Package));
 
-    
     if(radio_data.data_type==1){
-      Serial.print("RTCM Frame received: ");
-      for(int i=0;i<radio_data.data_size;i++){
-        if (radio_data.data[i] < 0x10) Serial.print(F("0"));  //WTF work around for eroneus HEX printing
-        Serial.print(radio_data.data[i], HEX);
+      memcpy(&rtk_frame_data[rtk_frame_size],&radio_data.data[0],radio_data.data_size);
+      rtk_frame_size+=radio_data.data_size;
+    }
+
+    if(radio_data.data_type==1 && radio_data.data_appendnext == 0){
+      Serial.print("RTCM Frame received, size:");
+      Serial.print(rtk_frame_size);
+      Serial.print(" data:");
+      for(int i=0;i<rtk_frame_size;i++){
+        if (rtk_frame_data[i] < 0x10) Serial.print(F("0"));  //WTF work around for eroneus HEX printing
+        Serial.print(rtk_frame_data[i], HEX);
       }
       Serial.println("");
-      myGNSS.pushRawData(((uint8_t *)&radio_data.data[0]), radio_data.data_size);
+      myGNSS.pushRawData(((uint8_t *)&rtk_frame_data[0]), rtk_frame_size);
+      rtk_frame_size=0;
     }
   }
 
