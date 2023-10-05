@@ -8,7 +8,7 @@
   by Tom Igoe
   this example is in the public domain
 */
-
+#include <Arduino.h>
 #include <Wire.h> //Needed for I2C to GNSS
 #include <SPI.h>
 #include <nRF24L01.h>
@@ -20,8 +20,9 @@ SFE_UBLOX_GNSS myGNSS;
 int count = 0;
 
 
-RF24 radio(8, 7); // CE, CSN
-uint8_t addresses[][6] = { "Base", "Rover" };
+RF24 radio(4, 5); // CE, CSN
+
+uint8_t addresses[2] = { 0x66, 0x64 };//"Base", "Rover" 
 
 static uint8_t rtk_frame_data[1024] = "";
 static uint8_t rtk_frame_size = 0 ;
@@ -140,7 +141,7 @@ void loop() {
 //returns 0 on success, -1 on error
 //data is a buffer of at least len bytes
 //hexstring is upper or lower case hexadecimal, NOT prepended with "0x"
-int hex2data(unsigned char *data, arduino::String hexstring, unsigned int len)
+int hex2data(unsigned char *data, String hexstring, unsigned int len)
 {
    
     size_t count = 0;

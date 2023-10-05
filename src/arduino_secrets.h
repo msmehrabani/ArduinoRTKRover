@@ -1,2 +1,2 @@
-#define SECRET_SSID "Cocofiber"
-#define SECRET_PASS "eZerfo$9$9$9"
+#define SECRET_SSID "TF-i60 G1-2708"
+#define SECRET_PASS "QRA8Q8TG"
