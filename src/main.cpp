@@ -64,7 +64,100 @@ void setup() {
   myGNSS.setPortInput(COM_PORT_I2C, COM_TYPE_UBX | COM_TYPE_RTCM3); //Enable UBX and RTCM input on I2C
   myGNSS.saveConfigSelective(VAL_CFG_SUBSEC_IOPORT); //Save the communications port settings to flash and BBR
   myGNSS.setI2CTransactionSize(128);
+  myGNSS.setI2COutput(COM_TYPE_UBX); //Set the I2C port to output UBX only (turn off NMEA noise)
+  myGNSS.setNavigationFrequency(2); //Produce two solutions per second
+  myGNSS.setAutoPVT(true); //Tell the GNSS to "send" each solution
 
+}
+
+
+void readPVT()
+{
+  // Calling getPVT returns true if there actually is a fresh navigation solution available.
+  // Start the reading only when valid LLH is available
+  if (myGNSS.getPVT() && (myGNSS.getInvalidLlh() == false))
+  {
+    Serial.println();
+    long latitude = myGNSS.getLatitude();
+    Serial.print(F("Lat: "));
+    Serial.print(latitude);
+
+    long longitude = myGNSS.getLongitude();
+    Serial.print(F(" Long: "));
+    Serial.print(longitude);
+    Serial.print(F(" (degrees * 10^-7)"));
+
+    long altitude = myGNSS.getAltitude();
+    Serial.print(F(" Alt: "));
+    Serial.print(altitude);
+    Serial.print(F(" (mm)"));
+
+    byte SIV = myGNSS.getSIV();
+    Serial.print(F(" SIV: "));
+    Serial.print(SIV);
+
+    int PDOP = myGNSS.getPDOP();
+    Serial.print(F(" PDOP: "));
+    Serial.print(PDOP);
+    Serial.print(F(" (10^-2)"));
+
+    int nedNorthVel = myGNSS.getNedNorthVel();
+    Serial.print(F(" VelN: "));
+    Serial.print(nedNorthVel);
+    Serial.print(F(" (mm/s)"));
+
+    int nedEastVel = myGNSS.getNedEastVel();
+    Serial.print(F(" VelE: "));
+    Serial.print(nedEastVel);
+    Serial.print(F(" (mm/s)"));
+
+    int nedDownVel = myGNSS.getNedDownVel();
+    Serial.print(F(" VelD: "));
+    Serial.print(nedDownVel);
+    Serial.print(F(" (mm/s)"));
+
+    int verticalAccEst = myGNSS.getVerticalAccEst();
+    Serial.print(F(" VAccEst: "));
+    Serial.print(verticalAccEst);
+    Serial.print(F(" (mm)"));
+
+    int horizontalAccEst = myGNSS.getHorizontalAccEst();
+    Serial.print(F(" HAccEst: "));
+    Serial.print(horizontalAccEst);
+    Serial.print(F(" (mm)"));
+
+    int speedAccEst = myGNSS.getSpeedAccEst();
+    Serial.print(F(" SpeedAccEst: "));
+    Serial.print(speedAccEst);
+    Serial.print(F(" (mm/s)"));
+
+    int headAccEst = myGNSS.getHeadingAccEst();
+    Serial.print(F(" HeadAccEst: "));
+    Serial.print(headAccEst);
+    Serial.print(F(" (degrees * 10^-5)"));
+
+    if (myGNSS.getHeadVehValid() == true) {
+      int headVeh = myGNSS.getHeadVeh();
+      Serial.print(F(" HeadVeh: "));
+      Serial.print(headVeh);
+      Serial.print(F(" (degrees * 10^-5)"));
+
+      int magDec = myGNSS.getMagDec();
+      Serial.print(F(" MagDec: "));
+      Serial.print(magDec);
+      Serial.print(F(" (degrees * 10^-2)"));
+
+      int magAcc = myGNSS.getMagAcc();
+      Serial.print(F(" MagAcc: "));
+      Serial.print(magAcc);
+      Serial.print(F(" (degrees * 10^-2)"));
+    }
+
+    Serial.println();
+  } else {
+    // Serial.print(".");
+    // delay(50);
+  }
 }
 
 int cycle=0;
@@ -88,14 +181,14 @@ void loop() {
     }
 
     if(radio_data.data_type==1 && radio_data.data_appendnext == 0){
-      Serial.print("RTCM Frame received, size:");
-      Serial.print(rtk_frame_size);
-      Serial.print(" data:");
-      for(int i=0;i<rtk_frame_size;i++){
-        if (rtk_frame_data[i] < 0x10) Serial.print(F("0"));  //WTF work around for eroneus HEX printing
-        Serial.print(rtk_frame_data[i], HEX);
-      }
-      Serial.println("");
+      // Serial.print("RTCM Frame received, size:");
+      // Serial.print(rtk_frame_size);
+      // Serial.print(" data:");
+      // for(int i=0;i<rtk_frame_size;i++){
+      //   if (rtk_frame_data[i] < 0x10) Serial.print(F("0"));  //WTF work around for eroneus HEX printing
+      //   // Serial.print(rtk_frame_data[i], HEX);
+      // }
+      // Serial.println("");
       myGNSS.pushRawData(((uint8_t *)&rtk_frame_data[0]), rtk_frame_size);
       rtk_frame_size=0;
     }
@@ -104,37 +197,39 @@ void loop() {
   if(cycle%2500 == 0){
 
     long latitude = myGNSS.getLatitude();
-    Serial.print(F("Lat: "));
-    Serial.print(latitude);
+    // Serial.print(F("Lat: "));
+    // Serial.print(latitude);
 
     long longitude = myGNSS.getLongitude();
-    Serial.print(F(" Long: "));
-    Serial.print(longitude);
+    // Serial.print(F(" Long: "));
+    // Serial.print(longitude);
 
     long altitude = myGNSS.getAltitude();
-    Serial.print(F(" Alt: "));
-    Serial.print(altitude);
+    // Serial.print(F(" Alt: "));
+    // Serial.print(altitude);
 
     byte fixType = myGNSS.getFixType();
-    Serial.print(F(" Fix: "));
-    if(fixType == 0) Serial.print(F("No fix"));
-    else if(fixType == 1) Serial.print(F("Dead reckoning"));
-    else if(fixType == 2) Serial.print(F("2D"));
-    else if(fixType == 3) Serial.print(F("3D"));
-    else if(fixType == 4) Serial.print(F("GNSS + Dead reckoning"));
-    else if(fixType == 5) Serial.print(F("Time only"));
+    // Serial.print(F(" Fix: "));
+    // if(fixType == 0) Serial.print(F("No fix"));
+    // else if(fixType == 1) Serial.print(F("Dead reckoning"));
+    // else if(fixType == 2) Serial.print(F("2D"));
+    // else if(fixType == 3) Serial.print(F("3D"));
+    // else if(fixType == 4) Serial.print(F("GNSS + Dead reckoning"));
+    // else if(fixType == 5) Serial.print(F("Time only"));
 
     byte RTK = myGNSS.getCarrierSolutionType();
-    Serial.print(" RTK: ");
-    Serial.print(RTK);
-    if (RTK == 0) Serial.print(F(" (No solution)"));
-    else if (RTK == 1) Serial.print(F(" (High precision floating fix)"));
-    else if (RTK == 2) Serial.print(F(" (High precision fix)"));
-    Serial.println("");
+    // Serial.print(" RTK: ");
+    // Serial.print(RTK);
+    // if (RTK == 0) Serial.print(F(" (No solution)"));
+    // else if (RTK == 1) Serial.print(F(" (High precision floating fix)"));
+    // else if (RTK == 2) Serial.print(F(" (High precision fix)"));
+    // Serial.println("");
+    
   }
   if(cycle >100000){
     cycle=0;
   }
+  readPVT();
 }
 
 //convert hexstring to len bytes of data
@@ -169,6 +264,10 @@ int hex2data(unsigned char *data, String hexstring, unsigned int len)
 
     return 0;
 }
+
+
+
+
 
 
 /*
